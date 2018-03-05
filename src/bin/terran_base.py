@@ -47,6 +47,7 @@ print(r"""
 """)
 
 print('Esperando conexiones de satelites')
+print('Web Server escuchando en http://localhost:5000')
 
 checkSatelites = 0
 

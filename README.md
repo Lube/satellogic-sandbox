@@ -14,7 +14,7 @@ pip install -r /path/to/requirements.txt
 
 Este comando lanza dos procesos: 
 - Un proceso que simula una base terrestre
-- Un web server que se comunica con dicha base, sirve archivos estáticos y una api con datos de la base
+- Un web server (http://localhost:5000) que se comunica con dicha base, sirve archivos estáticos y una api con datos de la base
 
 ## Lanzamiento de satelites
 

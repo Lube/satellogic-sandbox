@@ -14,12 +14,12 @@ pip install -r /path/to/requirements.txt
 
 Este comando lanza dos procesos: 
 - Un proceso que simula una base terrestre
-- Un web server (http://localhost:5000) que se comunica con dicha base, sirve archivos estáticos y una api con datos de la base
+- Un web server (http://localhost:5000) que se comunica con dicha base, sirve archivos estáticos y una api con datos de la base.
 
-## Lanzamiento de satelites
+## Lanzamiento de satélites
 
 ```bash
-./launch_satellite.sh
+./launch_satellite.sh nombre success_rate
 ```
 
-Este comando lanza un proceso que simula ser un satelite y se conecta con la base terrestre
+Este comando lanza un proceso que simula ser un satélite y se conecta con la base terrestre, si no se especifica un nombre se genera uno al azar, si no se especifica un success_rate (de 0 a 1) se le asigna 0.9 por defecto.

@@ -1,0 +1,8 @@
+#!/bin/bash
+
+export PYTHONPATH=${PWD}
+
+trap 'kill %1;' SIGINT
+{ python './src/bin/terran_base.py' & python './src/bin/web_server.py'; } 
+
+

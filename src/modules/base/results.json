@@ -1,0 +1,40 @@
+[
+  [
+    {
+      "nombre": "Awaiting Nominal Designation",
+      "status": "BUSY",
+      "success_rate": 0.9,
+      "results": [
+        {
+          "nombre": "A",
+          "resultado": 10
+        },
+        {
+          "nombre": "D",
+          "resultado": 4
+        }
+      ],
+      "last_message_at": 1520225507.0046182,
+      "plan": [
+        {
+          "recursos": [
+            1,
+            2
+          ],
+          "payoff": 10,
+          "hora": 1,
+          "nombre": "A"
+        },
+        {
+          "recursos": [
+            5,
+            6
+          ],
+          "payoff": 4,
+          "hora": 1,
+          "nombre": "D"
+        }
+      ]
+    }
+  ]
+]

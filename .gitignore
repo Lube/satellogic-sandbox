@@ -1,1 +1,4 @@
 src/dashboard/node_modules
+.vscode
+*.pyc
+*.pyo

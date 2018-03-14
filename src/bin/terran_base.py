@@ -23,22 +23,6 @@ except OSError:
     if os.path.exists(web_address):
         raise
 
-sat_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-sat_socket.setblocking(0)
-
-print('Abriendo canal de comunicaciones satelital %s' % sat_address)
-
-web_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-web_socket.setblocking(0)
-
-print('Abriendo canal de comunicaciones web %s' % web_address)
-
-sat_socket.bind(sat_address)
-web_socket.bind(web_address)
-
-sat_socket.listen(1)
-web_socket.listen(1)
-
 print(r"""
 ,--..Y    
 \   /`.   
@@ -49,42 +33,37 @@ print(r"""
 print('Esperando conexiones de satelites')
 print('Web Server escuchando en http://localhost:5000')
 
-checkSatelites = 0
-
 try:
-    while True:
-        readable, w, e = select.select([sat_socket, web_socket], [], [], 1000)
-        for s in readable:
-            if s is sat_socket:
-                connection, client_address = s.accept()
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket, \
+         socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as web_socket:
 
-                request = network.recvPackage(connection)
+        sat_socket.setblocking(0)
+        sat_socket.bind(sat_address)
+        sat_socket.listen(1)
 
-                Terran_Base.handleRequest(request, connection)
+        web_socket.setblocking(0)
+        web_socket.bind(web_address)
+        web_socket.listen(1)
 
-                connection.close()
+        print('Abriendo canal de comunicaciones satelital %s' % sat_address)
+        print('Abriendo canal de comunicaciones web %s' % web_address)
 
-            if s is web_socket:
-                connection, client_address = s.accept()
+        while True:
+            readable, w, e = select.select([sat_socket, web_socket], [], [],
+                                           1000)
 
-                request = network.recvPackage(connection)
-
-                Terran_Base.handleWebRequest(request, connection)
-
-                connection.close()
-        
-        if checkSatelites > 10:
-            Terran_Base.cleanupOldSatelites()
-            checkSatelites = 0
-
-        checkSatelites += 1
+            for s in readable:
+                with s.accept()[0] as connection:
+                    request = network.recvPackage(connection)
+                    if s is sat_socket:
+                        Terran_Base.handleRequest(request, connection)
+                    if s is web_socket:
+                        Terran_Base.handleWebRequest(request, connection)
 
 except KeyboardInterrupt:
     sys.exit(0)
 
 finally:
     print('Protocolo de autodestrucción iniciado!')
-    web_socket.close()
-    sat_socket.close()
     os.unlink(sat_address)
     os.unlink(web_address)

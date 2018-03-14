@@ -5,6 +5,7 @@ import pickle
 import json
 import functools
 import os.path
+import time, threading
 
 _dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -53,14 +54,20 @@ class Base:
             'startCampaña': self.ejecutarCampaña
         }
 
-    def updateLastMessageAt(self, sateliteName): 
+        self.cleanupOldSatelites()
+
+    def updateLastMessageAt(self, sateliteName):
         for idx, satelite in enumerate(self.satelites):
             if satelite.get('nombre') == sateliteName:
                 self.satelites[idx]['last_message_at'] = time.time()
 
-    def cleanupOldSatelites(self): 
-        self.satelites = [satelite for satelite in self.satelites if satelite.get('last_message_at') + 10 > time.time()]
+    def cleanupOldSatelites(self):
+        self.satelites = [
+            satelite for satelite in self.satelites
+            if satelite.get('last_message_at') + 10 > time.time()
+        ]
 
+        threading.Timer(10, self.cleanupOldSatelites).start()
 
     def handleRegistro(self, request, sock):
         self.satelites.append({
@@ -80,14 +87,8 @@ class Base:
     def handleDesconexion(self, request, sock):
         self.satelites = [
             satelite for satelite in self.satelites
-            if satelite.get('nombre') == request.get('nombre')
+            if satelite.get('nombre') != request.get('nombre')
         ]
-
-        sock.sendall(
-            network.encodeForNetwork({
-                'command': request.get('command'),
-                'result': True
-            }))
 
     def handleRequestAssignments(self, request, sock):
         if self.status == SENDING_ASSIGNMENT_INFO_STATUS:

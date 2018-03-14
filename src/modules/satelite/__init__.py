@@ -1,6 +1,5 @@
 import random
 import sys
-import socket
 
 import src.lib.network as network
 
@@ -22,13 +21,12 @@ possible_names = [
 
 
 class Satelite:
-    def __init__(self, nombre, success_rate, server_address):
+    def __init__(self, nombre, success_rate):
         self.status = OPERATIONAL_STATUS
         self.nombre = random.choice(
             possible_names) if nombre is None else nombre
         self.success_rate = 0.9 if (success_rate is None or success_rate > 1
                                     or success_rate < 0) else success_rate
-        self.server_address = server_address
 
         self.responseHandlerDispatcher = {
             'registro': self.handleResponseRegistro,
@@ -96,14 +94,3 @@ class Satelite:
                 'command': 'desconexion',
                 'nombre': self.nombre
             }))
-
-    def connectToBase(self):
-        try:
-            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-            sock.connect(self.server_address)
-
-            return sock
-
-        except socket.error as msg:
-            print('Base terrestre no encontrada')
-            sys.exit(1)

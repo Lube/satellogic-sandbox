@@ -55,7 +55,7 @@ class Base:
             'submitResults': self.handleResults
         }
 
-        self.loop.run_until_complete(asyncio.Task(self.cleanupOldSatelites()))
+        self.loop.create_task(self.cleanupOldSatelites())
 
     def updateLastMessageAt(self, sateliteName):
         for idx, satelite in enumerate(self.satelites):

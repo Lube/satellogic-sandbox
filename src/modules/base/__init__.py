@@ -6,6 +6,7 @@ import json
 import functools
 import os.path
 import time, threading
+import asyncio
 
 _dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -28,22 +29,15 @@ tareaD = dict = {'recursos': [5, 6], 'payoff': 4, 'hora': 1, 'nombre': 'D'}
 
 tareas = [tareaA, tareaB, tareaC, tareaD]
 
-
 class Base:
-    def __init__(self):
+    def __init__(self, loop):
         self.status = OPERATIONAL_STATUS
         self.tareas = tareas
+        self.loop = loop
         self.satelites = []
 
         json.dump(list(), open(_dir + "/results.json", "w"), indent=2)
         json.dump(list(), open(_dir + "/assignments.json", "w"), indent=2)
-
-        self.sateliteRequestHandlerDispatcher = {
-            'registro': self.handleRegistro,
-            'desconexion': self.handleDesconexion,
-            'requestAssignments': self.handleRequestAssignments,
-            'submitResults': self.handleResults
-        }
 
         self.webRequestHandlerDispatcher = {
             'getTareas': self.getTareas,
@@ -54,22 +48,33 @@ class Base:
             'startCampaña': self.ejecutarCampaña
         }
 
-        self.cleanupOldSatelites()
+        self.sateliteRequestHandlerDispatcher = {
+            'registro': self.handleRegistro,
+            'desconexion': self.handleDesconexion,
+            'requestAssignments': self.handleRequestAssignments,
+            'submitResults': self.handleResults
+        }
+
+        self.loop.run_until_complete(asyncio.Task(self.cleanupOldSatelites()))
 
     def updateLastMessageAt(self, sateliteName):
         for idx, satelite in enumerate(self.satelites):
             if satelite.get('nombre') == sateliteName:
                 self.satelites[idx]['last_message_at'] = time.time()
 
+
+    @asyncio.coroutine
     def cleanupOldSatelites(self):
-        self.satelites = [
-            satelite for satelite in self.satelites
-            if satelite.get('last_message_at') + 10 > time.time()
-        ]
+        while True:
+            self.satelites = [
+                satelite for satelite in self.satelites
+                if satelite.get('last_message_at') + 10 > time.time()
+            ]
 
-        threading.Timer(10, self.cleanupOldSatelites).start()
+            yield from asyncio.sleep(10)
 
-    def handleRegistro(self, request, sock):
+
+    def handleRegistro(self, request):
         self.satelites.append({
             'nombre': request.get('nombre'),
             'status': SATELITE_FREE_STATUS,
@@ -77,38 +82,33 @@ class Base:
             'results': None,
             'last_message_at': time.time()
         })
-        self.status = WAITING_FOR_ORDERS_STATUS
-        sock.sendall(
-            network.encodeForNetwork({
-                'command': request.get('command'),
-                'result': True
-            }))
 
-    def handleDesconexion(self, request, sock):
+        self.status = WAITING_FOR_ORDERS_STATUS
+
+        return True
+
+    def handleDesconexion(self, request):
         self.satelites = [
             satelite for satelite in self.satelites
             if satelite.get('nombre') != request.get('nombre')
         ]
 
-    def handleRequestAssignments(self, request, sock):
+    def handleRequestAssignments(self, request):
         if self.status == SENDING_ASSIGNMENT_INFO_STATUS:
             for idx, satelite in enumerate(self.satelites):
                 if satelite.get('nombre') == request.get('nombre') and \
                         satelite.get('status') == SATELITE_FREE_STATUS and \
                         satelite.get('plan') is not None:
                     self.satelites[idx]['status'] = SATELITE_BUSY_STATUS
-                    sock.sendall(
-                        network.encodeForNetwork({
-                            'command':
-                            request.get('command'),
-                            'plan':
-                            satelite.get('plan')
-                        }))
+                    
+                    response = satelite.get('plan')
 
-        if (all(
-                map(lambda satelite: satelite.get('status') == SATELITE_BUSY_STATUS,
-                    self.satelites))):
-            self.status = WAITING_FOR_RESULTS_STATUS
+            if (all(
+                    map(lambda satelite: satelite.get('status') == SATELITE_BUSY_STATUS,
+                        self.satelites))):
+                self.status = WAITING_FOR_RESULTS_STATUS
+
+        return response or None
 
     def resetAssignments(self):
         for idx, satelite in enumerate(self.satelites):
@@ -116,7 +116,7 @@ class Base:
             self.satelites[idx]['results'] = None
             self.satelites[idx]['plan'] = None
 
-    def handleResults(self, request, sock):
+    def handleResults(self, request):
         if self.status == WAITING_FOR_RESULTS_STATUS:
             for idx, satelite in enumerate(self.satelites):
                 if satelite.get('nombre') == request.get('nombre'):
@@ -137,46 +137,42 @@ class Base:
                 self.status = WAITING_FOR_ORDERS_STATUS
                 self.resetAssignments()
 
-            sock.sendall(
-                network.encodeForNetwork({
-                    'command': request.get('command'),
-                    'result': True
-                }))
+            return True
         else:
-            sock.sendall(
-                network.encodeForNetwork({
-                    'command': request.get('command'),
-                    'result': False
-                }))
+            return False
 
-    def handleRequest(self, request, sock):
+    def handleRequest(self, request, conn):
         command = request.get('command')
         self.updateLastMessageAt(request.get('nombre'))
-        self.sateliteRequestHandlerDispatcher.get(command,
-                                                  lambda x: x)(request, sock)
+        response = self.sateliteRequestHandlerDispatcher.get(command)(request, conn)
+        
+        yield from self.loop.sendall(conn, network.encodeForNetwork({
+            'command': request.get('command'),
+            'result': response
+        }))
+        conn.close()
 
-    def handleWebRequest(self, request, sock):
+
+    def handleWebRequest(self, request, conn):
         command = request.get('command')
-        self.webRequestHandlerDispatcher.get(command, lambda x: x)(request,
-                                                                   sock)
+        response = self.webRequestHandlerDispatcher.get(command)(request, conn)
 
-    def addTarea(self, request, sock):
+        yield from self.loop.sendall(conn, network.encodeForNetwork({
+            'command': request.get('command'),
+            'result': response
+        }))
+
+        conn.close()
+
+    def addTarea(self, request):
         self.tareas.append(request.get('tarea'))
-        sock.sendall(
-            network.encodeForNetwork({
-                'command': request.get('command'),
-                'result': True
-            }))
+        return True
 
-    def ejecutarCampaña(self, request, sock):
-        sock.sendall(
-            network.encodeForNetwork({
-                'command': request.get('command'),
-                'result': True
-            }))
-
+    def ejecutarCampaña(self, request):
         if self.status == WAITING_FOR_ORDERS_STATUS:
             self.repartirPlanesEntreSatelites(self.calcularCampaña())
+        
+        return True
 
     def calcularCampaña(self):
         return campañaComponent.obtenerMejorCampaña(
@@ -201,48 +197,20 @@ class Base:
 
         self.status = SENDING_ASSIGNMENT_INFO_STATUS
 
-    def getAsignaciones(self, request, sock):
+    def getAsignaciones(self, request):
         try:
-            sock.sendall(
-                network.encodeForNetwork({
-                    'command':
-                    request.get('command'),
-                    'result':
-                    json.load(open(_dir + "/assignments.json", "r"))
-                }))
+            return json.load(open(_dir + "/assignments.json", "r"))
         except:
-            sock.sendall(
-                network.encodeForNetwork({
-                    'command': request.get('command'),
-                    'result': []
-                }))
+            return []
 
-    def getResultados(self, request, sock):
+    def getResultados(self, request):
         try:
-            sock.sendall(
-                network.encodeForNetwork({
-                    'command':
-                    request.get('command'),
-                    'result':
-                    json.load(open(_dir + "/results.json", "r"))
-                }))
+            return json.load(open(_dir + "/results.json", "r"))
         except:
-            sock.sendall(
-                network.encodeForNetwork({
-                    'command': request.get('command'),
-                    'result': []
-                }))
+            return []
 
-    def getTareas(self, request, sock):
-        sock.sendall(
-            network.encodeForNetwork({
-                'command': request.get('command'),
-                'result': self.tareas
-            }))
+    def getTareas(self, request):
+        return self.tareas
 
-    def getSatelites(self, request, sock):
-        sock.sendall(
-            network.encodeForNetwork({
-                'command': request.get('command'),
-                'result': self.satelites
-            }))
+    def getSatelites(self, request):
+        return self.satelites

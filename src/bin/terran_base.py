@@ -1,4 +1,5 @@
 import socket
+import asyncio
 import select
 import sys
 import os
@@ -10,9 +11,6 @@ import src.lib.network as network
 
 sat_address = _dir + '/sat_socket'
 web_address = _dir + '/web_socket'
-
-print('Terran base warming up')
-Terran_Base = base.Base()
 
 try:
     os.unlink(sat_address)
@@ -33,32 +31,43 @@ print(r"""
 print('Esperando conexiones de satelites')
 print('Web Server escuchando en http://localhost:5000')
 
+loop = asyncio.get_event_loop()
+
+print('Terran base warming up')
+Terran_Base = base.Base(loop)
+
 try:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket, \
          socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as web_socket:
 
         sat_socket.setblocking(0)
         sat_socket.bind(sat_address)
-        sat_socket.listen(1)
+        sat_socket.listen(128)
 
         web_socket.setblocking(0)
         web_socket.bind(web_address)
-        web_socket.listen(1)
+        web_socket.listen(128)
 
         print('Abriendo canal de comunicaciones satelital %s' % sat_address)
         print('Abriendo canal de comunicaciones web %s' % web_address)
 
-        while True:
-            readable, w, e = select.select([sat_socket, web_socket], [], [],
-                                           1000)
+        @asyncio.coroutine
+        def terran_sat_server():
+            while True:
+                conn, addr = yield from loop.sock_accept(sat_socket)
+                request = network.recvPackage(loop, conn)
+                loop.create_task(Terran_Base.handleRequest(loop, request, conn))
 
-            for s in readable:
-                with s.accept()[0] as connection:
-                    request = network.recvPackage(connection)
-                    if s is sat_socket:
-                        Terran_Base.handleRequest(request, connection)
-                    if s is web_socket:
-                        Terran_Base.handleWebRequest(request, connection)
+        @asyncio.coroutine
+        def terran_web_server():
+            while True:
+                conn, addr = yield from loop.sock_accept(web_socket)
+                request = network.recvPackage(conn, loop)
+                loop.create_task(Terran_Base.handleWebRequest(loop, request, conn))
+
+        loop.create_task(terran_sat_server())
+        loop.create_task(terran_web_server())
+        loop.run_forever()
 
 except KeyboardInterrupt:
     sys.exit(0)

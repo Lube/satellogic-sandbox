@@ -2,5 +2,5 @@
 
 export PYTHONPATH=${PWD}
 
-exec python './src/bin/satelite.py' "$@"
+exec python3 './src/bin/satelite.py' "$@"
 

@@ -57,12 +57,6 @@ class Base:
 
         self.loop.create_task(self.cleanupOldSatelites())
 
-    def updateLastMessageAt(self, sateliteName):
-        for idx, satelite in enumerate(self.satelites):
-            if satelite.get('nombre') == sateliteName:
-                self.satelites[idx]['last_message_at'] = time.time()
-
-
     @asyncio.coroutine
     def cleanupOldSatelites(self):
         while True:
@@ -72,7 +66,6 @@ class Base:
             ]
 
             yield from asyncio.sleep(10)
-
 
     def handleRegistro(self, request):
         self.satelites.append({
@@ -94,6 +87,8 @@ class Base:
         ]
 
     def handleRequestAssignments(self, request):
+        response = None
+
         if self.status == SENDING_ASSIGNMENT_INFO_STATUS:
             for idx, satelite in enumerate(self.satelites):
                 if satelite.get('nombre') == request.get('nombre') and \
@@ -108,7 +103,7 @@ class Base:
                         self.satelites))):
                 self.status = WAITING_FOR_RESULTS_STATUS
 
-        return response or None
+        return response
 
     def resetAssignments(self):
         for idx, satelite in enumerate(self.satelites):
@@ -141,28 +136,29 @@ class Base:
         else:
             return False
 
-    def handleRequest(self, request, conn):
-        command = request.get('command')
+    def updateLastMessageAt(self, sateliteName):
+        for idx, satelite in enumerate(self.satelites):
+            if satelite.get('nombre') == sateliteName:
+                self.satelites[idx]['last_message_at'] = time.time()
+                
+    def handleRequest(self, request):
         self.updateLastMessageAt(request.get('nombre'))
-        response = self.sateliteRequestHandlerDispatcher.get(command)(request, conn)
-        
-        yield from self.loop.sendall(conn, network.encodeForNetwork({
+
+        response = self.sateliteRequestHandlerDispatcher.get(request.get('command'))(request)
+
+        return {
             'command': request.get('command'),
             'result': response
-        }))
-        conn.close()
+        }
 
 
-    def handleWebRequest(self, request, conn):
-        command = request.get('command')
-        response = self.webRequestHandlerDispatcher.get(command)(request, conn)
+    def handleWebRequest(self, request):
+        response = self.webRequestHandlerDispatcher.get(request.get('command'))(request)
 
-        yield from self.loop.sendall(conn, network.encodeForNetwork({
+        return {
             'command': request.get('command'),
             'result': response
-        }))
-
-        conn.close()
+        }
 
     def addTarea(self, request):
         self.tareas.append(request.get('tarea'))

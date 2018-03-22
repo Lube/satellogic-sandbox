@@ -8,12 +8,24 @@ def encodeForNetwork(obj):
 
     return bytearray(length) + serialized
 
+def recv(connection):
+    cLength = connection.recv(32)
 
-def recvPackage(connection, loop=None):
-    if loop is None:
-        cLength = loop.sock_recv(connection, 32)
-    else:
-        cLength = yield from loop.sock_recv(connection, 32)
+    length = int.from_bytes(cLength, sys.byteorder, signed=False)
+
+    if length > 0:
+        response = bytes()
+        chunk = bytes()
+
+        while len(chunk) < length:
+            chunk =  connection.recv(4096)
+            response += chunk
+
+        return decodeForNetwork(response)
+    return {}
+
+def recv_async (connection, loop):
+    cLength = yield from loop.sock_recv(connection, 32)
 
     length = int.from_bytes(cLength, sys.byteorder, signed=False)
 

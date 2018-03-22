@@ -16,17 +16,6 @@ _dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_url_path=_dir + '/../dashboard/build')
 CORS(app)
 
-server_address = _dir + '/web_socket'
-
-def connectToTerranBase():
-    try:
-        web_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        web_socket.connect(server_address)
-        return web_socket
-    except socket.error as msg:
-        print(msg)
-        sys.exit(1)
-
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
@@ -43,6 +32,16 @@ def serve(path):
         else:
             return send_from_directory(base_dir, 'index.html')
 
+server_address = _dir + '/web_socket'
+
+def connectToTerranBase():
+    try:
+        web_socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+        web_socket.connect(server_address)
+        return web_socket
+    except socket.error as msg:
+        print(msg)
+        sys.exit(1)
 
 def requestToTerranBaseAndDecodeResponse(command, extra=None):
     request = {}
@@ -54,7 +53,7 @@ def requestToTerranBaseAndDecodeResponse(command, extra=None):
     web_socket = connectToTerranBase()
     web_socket.sendall(network.encodeForNetwork(request))
 
-    response = network.recvPackage(web_socket)
+    response = network.recv(web_socket)
 
     return response.get('result')
 

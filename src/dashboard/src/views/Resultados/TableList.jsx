@@ -16,26 +16,20 @@ class TableList extends Component {
 
   renderResultadoPlan(plan, key) {
     return plan.map(tarea => (
-      <Card
-        ctTableFullWidth
-        ctTableResponsive
-        content={
-          <Table striped hover>
-            <thead>
-              <tr>
-                {fields_tarea.map((field, key) => <th key={key}>{field}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              <tr key={key}>
-                {fields_tarea.map((field, key) => (
-                  <td key={key}>{tarea[field]}</td>
-                ))}
-              </tr>
-            </tbody>
-          </Table>
-        }
-      />
+      <Table striped hover>
+        <thead>
+          <tr>
+            {fields_tarea.map((field, key) => <th key={key}>{field}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          <tr key={key}>
+            {fields_tarea.map((field, key) => (
+              <td key={key}>{tarea[field]}</td>
+            ))}
+          </tr>
+        </tbody>
+      </Table>
     ));
   }
 

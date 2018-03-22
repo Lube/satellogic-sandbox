@@ -35,39 +35,40 @@ loop = asyncio.get_event_loop()
 
 print('Terran base warming up')
 Terran_Base = base.Base(loop)
-print('Terran base warming up')
+
+@asyncio.coroutine
+def terran_server(socket, handler):
+    while True:
+        conn, addr = yield from loop.sock_accept(socket)
+        loop.create_task(request(conn, handler))
+
+@asyncio.coroutine
+def request (connection, handler):
+    request = yield from network.recv_async(connection, loop)
+    response = handler(request)
+    try:
+        yield from loop.sock_sendall(connection, network.encodeForNetwork(response))
+        connection.close()
+    except BrokenPipeError:
+        pass
+
+def init_socket(socket, address):
+    socket.setblocking(0)
+    socket.bind(address)
+    socket.listen(128)
 
 try:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket, \
          socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as web_socket:
 
-        sat_socket.setblocking(0)
-        sat_socket.bind(sat_address)
-        sat_socket.listen(128)
-
-        web_socket.setblocking(0)
-        web_socket.bind(web_address)
-        web_socket.listen(128)
+        init_socket(sat_socket, sat_address)
+        init_socket(web_socket, web_address)
 
         print('Abriendo canal de comunicaciones satelital %s' % sat_address)
         print('Abriendo canal de comunicaciones web %s' % web_address)
 
-        @asyncio.coroutine
-        def terran_sat_server():
-            while True:
-                conn, addr = yield from loop.sock_accept(sat_socket)
-                request = yield from network.recvPackage(loop, conn)
-                loop.create_task(Terran_Base.handleRequest(request, conn))
-
-        @asyncio.coroutine
-        def terran_web_server():
-            while True:
-                conn, addr = yield from loop.sock_accept(web_socket)
-                request = network.recvPackage(conn, loop)
-                loop.create_task(Terran_Base.handleWebRequest(request, conn))
-
-        loop.create_task(terran_sat_server())
-        loop.create_task(terran_web_server())
+        loop.create_task(terran_server(sat_socket, Terran_Base.handleRequest))
+        loop.create_task(terran_server(web_socket, Terran_Base.handleWebRequest))
         loop.run_forever()
 
 except KeyboardInterrupt:

@@ -27,27 +27,34 @@ try:
         ]:
             with socket.socket(socket.AF_UNIX,
                                socket.SOCK_STREAM) as sat_socket:
-                sat_socket.connect(server_address)
+                try:
+                    sat_socket.connect(server_address)
 
-                if Satelite.status == satelite.OPERATIONAL_STATUS:
-                    Satelite.registerToTerranBase(sat_socket)
-                elif Satelite.status == satelite.WAITING_FOR_ASSIGNMENT_STATUS:
-                    Satelite.sendAssignmentRequest(sat_socket)
-                elif Satelite.status == satelite.WAITING_TO_SEND_RESULTS_STATUS:
-                    Satelite.sendResults(sat_socket)
-                    print(
-                        "Tareas del satelite terminadas, enviando resultados!")
+                    if Satelite.status == satelite.OPERATIONAL_STATUS:
+                        Satelite.registerToTerranBase(sat_socket)
+                    elif Satelite.status == satelite.WAITING_FOR_ASSIGNMENT_STATUS:
+                        Satelite.sendAssignmentRequest(sat_socket)
+                    elif Satelite.status == satelite.WAITING_TO_SEND_RESULTS_STATUS:
+                        Satelite.sendResults(sat_socket)
+                        print("Tareas del satelite terminadas, enviando resultados!")
 
-                if sat_socket.fileno() != -1:
-                    response = network.recvPackage(sat_socket)
-                    Satelite.handleResponse(response)
+                    if sat_socket.fileno() != -1:
+                        response = network.recv(sat_socket)
+                        Satelite.handleResponse(response)
+
+                except ConnectionRefusedError:
+                    print('Base terrestre no encontrada!')
+                    sys.exit(0)
 
         time.sleep(2)
 
 except KeyboardInterrupt:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket:
-        sat_socket.connect(server_address)
-        Satelite.disconnectFromBase(sat_socket)
+        try:
+            sat_socket.connect(server_address)
+            Satelite.disconnectFromBase(sat_socket)
+        except ConnectionRefusedError:
+            pass
     sys.exit(0)
 
 finally:

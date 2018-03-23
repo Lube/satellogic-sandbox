@@ -10,28 +10,33 @@ import asyncio
 
 _dir = os.path.dirname(os.path.abspath(__file__))
 
+import src.modules.tarea as tareaComponent
 import src.modules.plan as planComponent
 import src.modules.campaña as campañaComponent
 import src.lib.network as network
 
-OPERATIONAL_STATUS = "OPERATIONAL"
 WAITING_FOR_ORDERS_STATUS = "WAITING FOR ORDERS"
-SENDING_ASSIGNMENT_INFO_STATUS = "SENDING ASSIGNMENT INFO"
 WAITING_FOR_RESULTS_STATUS = "WAITING FOR RESULTS"
 
 SATELITE_FREE_STATUS = "FREE"
 SATELITE_BUSY_STATUS = "BUSY"
 
-tareaA = dict = {'recursos': [1, 2], 'payoff': 10, 'hora': 1, 'nombre': 'A'}
-tareaB = dict = {'recursos': [1, 5], 'payoff': 4, 'hora': 1, 'nombre': 'B'}
-tareaC = dict = {'recursos': [1, 6], 'payoff': 4, 'hora': 1, 'nombre': 'C'}
-tareaD = dict = {'recursos': [5, 6], 'payoff': 4, 'hora': 1, 'nombre': 'D'}
+# tareaA = dict = {'recursos': [1, 2], 'payoff': 10, 'hora': 1, 'nombre': 'A'}
+# tareaB = dict = {'recursos': [1, 5], 'payoff': 4, 'hora': 1, 'nombre': 'B'}
+# tareaC = dict = {'recursos': [1, 6], 'payoff': 4, 'hora': 1, 'nombre': 'C'}
+# tareaD = dict = {'recursos': [5, 6], 'payoff': 4, 'hora': 1, 'nombre': 'D'}
 
-tareas = [tareaA, tareaB, tareaC, tareaD]
+# tareas = [tareaA, tareaB, tareaC, tareaD]
+
+tareas = [
+    tareaComponent.generateRandomTarea()
+    for _ in range(int(5 * random.random()) + 1)
+]
+
 
 class Base:
     def __init__(self, loop):
-        self.status = OPERATIONAL_STATUS
+        self.status = WAITING_FOR_ORDERS_STATUS
         self.tareas = tareas
         self.loop = loop
         self.satelites = []
@@ -69,6 +74,7 @@ class Base:
 
     def handleRegistro(self, request):
         self.satelites.append({
+            'id': request.get('id'),
             'nombre': request.get('nombre'),
             'status': SATELITE_FREE_STATUS,
             'success_rate': request.get('success_rate'),
@@ -76,32 +82,24 @@ class Base:
             'last_message_at': time.time()
         })
 
-        self.status = WAITING_FOR_ORDERS_STATUS
-
         return True
 
     def handleDesconexion(self, request):
         self.satelites = [
             satelite for satelite in self.satelites
-            if satelite.get('nombre') != request.get('nombre')
+            if satelite.get('id') != request.get('id')
         ]
 
     def handleRequestAssignments(self, request):
         response = None
 
-        if self.status == SENDING_ASSIGNMENT_INFO_STATUS:
-            for idx, satelite in enumerate(self.satelites):
-                if satelite.get('nombre') == request.get('nombre') and \
-                        satelite.get('status') == SATELITE_FREE_STATUS and \
-                        satelite.get('plan') is not None:
-                    self.satelites[idx]['status'] = SATELITE_BUSY_STATUS
-                    
-                    response = satelite.get('plan')
+        for idx, satelite in enumerate(self.satelites):
+            if satelite.get('id') == request.get('id') and \
+                    satelite.get('status') == SATELITE_FREE_STATUS and \
+                    satelite.get('plan') is not None:
+                self.satelites[idx]['status'] = SATELITE_BUSY_STATUS
 
-            if (all(
-                    map(lambda satelite: satelite.get('status') == SATELITE_BUSY_STATUS,
-                        self.satelites))):
-                self.status = WAITING_FOR_RESULTS_STATUS
+                response = satelite.get('plan')
 
         return response
 
@@ -112,62 +110,58 @@ class Base:
             self.satelites[idx]['plan'] = None
 
     def handleResults(self, request):
-        if self.status == WAITING_FOR_RESULTS_STATUS:
-            for idx, satelite in enumerate(self.satelites):
-                if satelite.get('nombre') == request.get('nombre'):
-                    self.satelites[idx]['results'] = request.get('results')
-
-            if all([
-                    satelite.get('results') is not None
-                    for satelite in self.satelites
-            ]):
-                try:
-                    results = json.load(open(_dir + "/results.json", "r"))
-                except:
-                    results = []
-
-                results.append(self.satelites)
-                json.dump(results, open(_dir + "/results.json", "w"), indent=2)
-
-                self.status = WAITING_FOR_ORDERS_STATUS
-                self.resetAssignments()
-
-            return True
-        else:
-            return False
-
-    def updateLastMessageAt(self, sateliteName):
         for idx, satelite in enumerate(self.satelites):
-            if satelite.get('nombre') == sateliteName:
+            if satelite.get('id') == request.get('id'):
+                self.satelites[idx]['results'] = request.get('results')
+
+        if all(
+                list(
+                    map(lambda x: x.get('results') is not None, [
+                        satelite for satelite in self.satelites
+                        if satelite.get('plan') is not None
+                    ]))):
+            try:
+                results = json.load(open(_dir + "/results.json", "r"))
+            except:
+                results = []
+
+            results.append(self.satelites)
+            json.dump(results, open(_dir + "/results.json", "w"), indent=2)
+
+            self.status = WAITING_FOR_ORDERS_STATUS
+            self.resetAssignments()
+
+        return True
+
+    def updateLastMessageAt(self, sateliteId):
+        for idx, satelite in enumerate(self.satelites):
+            if satelite.get('id') == sateliteId:
                 self.satelites[idx]['last_message_at'] = time.time()
-                
+
     def handleRequest(self, request):
-        self.updateLastMessageAt(request.get('nombre'))
+        self.updateLastMessageAt(request.get('id'))
 
-        response = self.sateliteRequestHandlerDispatcher.get(request.get('command'))(request)
+        response = self.sateliteRequestHandlerDispatcher.get(
+            request.get('command'))(request)
 
-        return {
-            'command': request.get('command'),
-            'result': response
-        }
-
+        return {'command': request.get('command'), 'result': response}
 
     def handleWebRequest(self, request):
-        response = self.webRequestHandlerDispatcher.get(request.get('command'))(request)
+        response = self.webRequestHandlerDispatcher.get(
+            request.get('command'))(request)
 
-        return {
-            'command': request.get('command'),
-            'result': response
-        }
+        return {'command': request.get('command'), 'result': response}
 
     def addTarea(self, request):
         self.tareas.append(request.get('tarea'))
         return True
 
     def ejecutarCampaña(self, request):
-        if self.status == WAITING_FOR_ORDERS_STATUS:
+        if self.status == WAITING_FOR_ORDERS_STATUS and len(
+                self.satelites) > 0:
+            self.status = WAITING_FOR_RESULTS_STATUS
             self.repartirPlanesEntreSatelites(self.calcularCampaña())
-        
+
         return True
 
     def calcularCampaña(self):
@@ -180,7 +174,7 @@ class Base:
 
         for sateliteA, plan in zip(satelites, campaña):
             for idx, sateliteB in enumerate(self.satelites):
-                if sateliteA.get('nombre') == sateliteB.get('nombre'):
+                if sateliteA.get('id') == sateliteB.get('id'):
                     self.satelites[idx]['plan'] = plan
 
         try:
@@ -190,8 +184,6 @@ class Base:
 
         assignments.append(self.satelites)
         json.dump(assignments, open(_dir + "/assignments.json", "w"), indent=2)
-
-        self.status = SENDING_ASSIGNMENT_INFO_STATUS
 
     def getAsignaciones(self, request):
         try:

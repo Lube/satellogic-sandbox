@@ -16,23 +16,26 @@ _dir = os.path.dirname(os.path.abspath(__file__))
 app = Flask(__name__, static_url_path=_dir + '/../dashboard/build')
 CORS(app)
 
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def serve(path):
     base_dir = _dir + '/../dashboard/build'
-    if(path == ""):
+    if (path == ""):
         return send_from_directory(base_dir, 'index.html')
     else:
         fileName = path.split("/")[-1]
         partialFolderPath = path.split("/")[:-1]
         folderPath = os.path.join(base_dir, '/'.join(partialFolderPath))
 
-        if(os.path.exists(os.path.join(folderPath, fileName))):
+        if (os.path.exists(os.path.join(folderPath, fileName))):
             return send_from_directory(folderPath, fileName)
         else:
             return send_from_directory(base_dir, 'index.html')
 
+
 server_address = _dir + '/web_socket'
+
 
 def connectToTerranBase():
     try:
@@ -42,6 +45,7 @@ def connectToTerranBase():
     except socket.error as msg:
         print(msg)
         sys.exit(1)
+
 
 def requestToTerranBaseAndDecodeResponse(command, extra=None):
     request = {}
@@ -56,6 +60,7 @@ def requestToTerranBaseAndDecodeResponse(command, extra=None):
     response = network.recv(web_socket)
 
     return response.get('result')
+
 
 @app.route("/api/tareas")
 def tareas():
@@ -93,4 +98,6 @@ def ejecutarCampaña():
     response = requestToTerranBaseAndDecodeResponse('startCampaña')
     return jsonify(response)
 
-app.run(port=5000, host='0.0.0.0', debug=False, use_reloader=False, threaded=True)
+
+app.run(
+    port=5000, host='0.0.0.0', debug=False, use_reloader=False, threaded=True)

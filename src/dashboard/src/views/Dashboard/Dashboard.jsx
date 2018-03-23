@@ -38,15 +38,17 @@ class Dashboard extends Component {
                 statsValue={`$${resultados.reduce(
                   (payoffTotal, resultado) =>
                     payoffTotal +
-                    resultado.reduce(
-                      (payoffResultado, plan) =>
-                        payoffResultado +
-                        plan.results.reduce(
-                          (payoffPlan, tarea) => tarea.resultado + payoffPlan,
-                          0
-                        ),
-                      0
-                    ),
+                    resultado
+                      .filter(plan => plan.results)
+                      .reduce(
+                        (payoffResultado, plan) =>
+                          payoffResultado +
+                          plan.results.reduce(
+                            (payoffPlan, tarea) => tarea.resultado + payoffPlan,
+                            0
+                          ),
+                        0
+                      ),
                   0
                 )}`}
                 statsIcon={<i className="fa fa-calendar-o" />}
@@ -60,16 +62,20 @@ class Dashboard extends Component {
                 statsValue={resultados.reduce(
                   (payoffTotal, resultado) =>
                     payoffTotal +
-                    resultado.reduce(
-                      (payoffResultado, plan) =>
-                        payoffResultado +
-                        plan.results.reduce(
-                          (payoffPlan, tarea) =>
-                            tarea.resultado === 0 ? 1 + payoffPlan : payoffPlan,
-                          0
-                        ),
-                      0
-                    ),
+                    resultado
+                      .filter(plan => plan.results)
+                      .reduce(
+                        (payoffResultado, plan) =>
+                          payoffResultado +
+                          plan.results.reduce(
+                            (payoffPlan, tarea) =>
+                              tarea.resultado === 0
+                                ? 1 + payoffPlan
+                                : payoffPlan,
+                            0
+                          ),
+                        0
+                      ),
                   0
                 )}
                 statsIcon={<i className="fa fa-clock-o" />}

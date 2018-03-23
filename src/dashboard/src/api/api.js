@@ -2,7 +2,7 @@ import httpClient from "./httpClient";
 
 export async function getTareas() {
   const { data } = await httpClient.get("/api/tareas");
-  console.log(data);
+
   return data;
 }
 

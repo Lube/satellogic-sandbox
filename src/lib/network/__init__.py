@@ -1,5 +1,6 @@
 import pickle
 import sys
+import asyncio
 
 
 def encodeForNetwork(obj):
@@ -7,6 +8,7 @@ def encodeForNetwork(obj):
     length = len(serialized).to_bytes(32, sys.byteorder)
 
     return bytearray(length) + serialized
+
 
 def recv(connection):
     cLength = connection.recv(32)
@@ -17,14 +19,16 @@ def recv(connection):
         response = bytes()
         chunk = bytes()
 
-        while len(chunk) < length:
-            chunk =  connection.recv(4096)
+        while len(response) < length:
+            chunk = connection.recv(4096)
             response += chunk
 
         return decodeForNetwork(response)
     return {}
 
-def recv_async (connection, loop):
+
+@asyncio.coroutine
+def recv_async(connection, loop):
     cLength = yield from loop.sock_recv(connection, 32)
 
     length = int.from_bytes(cLength, sys.byteorder, signed=False)
@@ -33,8 +37,8 @@ def recv_async (connection, loop):
         response = bytes()
         chunk = bytes()
 
-        while len(chunk) < length:
-            chunk =  yield from loop.sock_recv(connection, 4096)
+        while len(response) < length:
+            chunk = yield from loop.sock_recv(connection, 4096)
             response += chunk
 
         return decodeForNetwork(response)

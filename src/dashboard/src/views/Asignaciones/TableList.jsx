@@ -14,28 +14,32 @@ class TableList extends Component {
     this.renderPlan = this.renderPlan.bind(this);
   }
 
-  renderPlan(tareas, key) {
-    return tareas.map(tarea => (
-      <Table striped hover>
-        <thead>
-          <tr>
-            {fields_tarea.map((field, key) => <th key={key}>{field}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          <tr key={key}>
-            {fields_tarea.map((field, key) => (
-              <td key={key}>{JSON.stringify(tarea[field])}</td>
-            ))}
-          </tr>
-        </tbody>
-      </Table>
-    ));
+  renderPlan(tareas) {
+    return (
+      tareas &&
+      tareas.map((tarea, key) => (
+        <Table key={key} striped hover>
+          <thead>
+            <tr>
+              {fields_tarea.map((field, key) => <th key={key}>{field}</th>)}
+            </tr>
+          </thead>
+          <tbody>
+            <tr key={key}>
+              {fields_tarea.map((field, key) => (
+                <td key={key}>{JSON.stringify(tarea[field])}</td>
+              ))}
+            </tr>
+          </tbody>
+        </Table>
+      ))
+    );
   }
 
   renderAsignacion(asignacion, i) {
     return (
       <Card
+        key={i}
         title={`Asignación ${i}`}
         ctTableFullWidth
         ctTableResponsive

@@ -36,26 +36,31 @@ loop = asyncio.get_event_loop()
 print('Terran base warming up')
 Terran_Base = base.Base(loop)
 
+
 @asyncio.coroutine
 def terran_server(socket, handler):
     while True:
         conn, addr = yield from loop.sock_accept(socket)
         loop.create_task(request(conn, handler))
 
+
 @asyncio.coroutine
-def request (connection, handler):
+def request(connection, handler):
     request = yield from network.recv_async(connection, loop)
     response = handler(request)
     try:
-        yield from loop.sock_sendall(connection, network.encodeForNetwork(response))
+        yield from loop.sock_sendall(connection,
+                                     network.encodeForNetwork(response))
         connection.close()
     except BrokenPipeError:
         pass
+
 
 def init_socket(socket, address):
     socket.setblocking(0)
     socket.bind(address)
     socket.listen(128)
+
 
 try:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket, \
@@ -68,7 +73,8 @@ try:
         print('Abriendo canal de comunicaciones web %s' % web_address)
 
         loop.create_task(terran_server(sat_socket, Terran_Base.handleRequest))
-        loop.create_task(terran_server(web_socket, Terran_Base.handleWebRequest))
+        loop.create_task(
+            terran_server(web_socket, Terran_Base.handleWebRequest))
         loop.run_forever()
 
 except KeyboardInterrupt:

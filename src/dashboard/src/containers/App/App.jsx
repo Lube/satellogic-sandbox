@@ -45,7 +45,7 @@ class App extends Component {
   }
 
   componentDidMount() {
-    setInterval(this.updateEntities, 2000);
+    setInterval(this.updateEntities, 2500);
   }
 
   componentDidUpdate(e) {

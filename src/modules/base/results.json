@@ -1,1 +1,51 @@
-[]
+[
+  [
+    {
+      "id": "0e140780-2689-49de-b84c-eadbe10c31b1",
+      "nombre": "All The Same, I Saw It First\u2020",
+      "status": "BUSY",
+      "success_rate": 0.9,
+      "results": [
+        {
+          "nombre": "Colonizar Octans.",
+          "resultado": 4
+        }
+      ],
+      "last_message_at": 1521778069.5804799,
+      "plan": [
+        {
+          "payoff": 4,
+          "hora": 2,
+          "nombre": "Colonizar Octans.",
+          "recursos": [
+            1
+          ]
+        }
+      ]
+    },
+    {
+      "id": "7fed15b0-ef51-4915-8514-4544961ac730",
+      "nombre": "Demented But Determined\u2020",
+      "status": "BUSY",
+      "success_rate": 0.9,
+      "results": [
+        {
+          "nombre": "Investigar Equuleus.",
+          "resultado": 9
+        }
+      ],
+      "last_message_at": 1521778070.0244844,
+      "plan": [
+        {
+          "payoff": 9,
+          "hora": 3,
+          "nombre": "Investigar Equuleus.",
+          "recursos": [
+            2,
+            3
+          ]
+        }
+      ]
+    }
+  ]
+]

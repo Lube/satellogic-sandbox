@@ -51,3 +51,72 @@ def obtenerMejorCampaña(planes, numeroMaximoSatelites):
                     buscarCampañas(planes, numeroMaximoSatelites),
                     key=lambda estrategia: calcularValor(estrategia)))),
         "No hay campañas")
+
+
+def obtenerMejorCampañaBarata(tareasIniciales):
+    recursosIniciales = list(
+        set([
+            recurso
+            for tarea in [tarea['recursos'] for tarea in tareasIniciales]
+            for recurso in tarea
+        ]))
+
+    campaña = []
+    tareas = sorted(tareasIniciales[:], key=lambda tarea: tarea['payoff'])
+
+    for tarea in tareas:
+        plan = []
+        recursos = initRecursos(recursosIniciales)
+
+        for tarea in tareas:
+            if tareaValidaEnPlan(recursos, tarea):
+                plan.append(tarea)
+                tareas = actualizarTareas(tareas, tarea)
+
+                for recurso in tarea['recursos']:
+                    recursos = actualizarRecursos(recursos, recurso,
+                                                  tarea['hora'])
+
+        if len(plan) > 0:
+            campaña.append(plan)
+
+    return sorted(campaña, key=getPayoffPlan)
+
+
+def getPayoffPlan(plan):
+    return functools.reduce(lambda total, tarea: tarea['payoff'] + total, plan,
+                            0)
+
+
+def initRecursos(recursos):
+    return [{'recurso': recurso, 'horas': []} for recurso in recursos]
+
+
+def tareaValidaEnPlan(recursos, tarea):
+    return all(
+        map(lambda recurso: isRecursoFree(recursos, recurso, tarea['hora']),
+            tarea['recursos']))
+
+
+def isRecursoFree(recursos, recursoAChequear, hora):
+    for recurso in recursos:
+        if recursoAChequear == recurso['recurso'] and hora in recurso['horas']:
+            return False
+    return True
+
+
+def actualizarRecursos(recursos, recursoConsumido, hora):
+    recursosActualizados = []
+    for recurso in recursos:
+        if recursoConsumido == recurso['recurso']:
+            recurso['horas'].append(hora)
+        recursosActualizados.append(recurso)
+    return recursosActualizados
+
+
+def actualizarTareas(tareas, tarea):
+    return sorted(
+        list(
+            filter(lambda tareaAFiltrar: tareaAFiltrar['id'] != tarea['id'],
+                   tareas)),
+        key=lambda tarea: tarea['payoff'])

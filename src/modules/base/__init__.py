@@ -30,7 +30,7 @@ SATELITE_BUSY_STATUS = "BUSY"
 
 tareas = [
     tareaComponent.generateRandomTarea()
-    for _ in range(int(5 * random.random()) + 1)
+    for _ in range(int(500 * random.random()) + 1)
 ]
 
 
@@ -160,13 +160,16 @@ class Base:
         if self.status == WAITING_FOR_ORDERS_STATUS and len(
                 self.satelites) > 0:
             self.status = WAITING_FOR_RESULTS_STATUS
-            self.repartirPlanesEntreSatelites(self.calcularCampaña())
+            self.repartirPlanesEntreSatelites(self.calcularCampañaBarata())
 
         return True
 
     def calcularCampaña(self):
         return campañaComponent.obtenerMejorCampaña(
             planComponent.buscarPlanes(self.tareas), len(self.satelites))
+
+    def calcularCampañaBarata(self):
+        return campañaComponent.obtenerMejorCampañaBarata(self.tareas)
 
     def repartirPlanesEntreSatelites(self, campaña):
         satelites = sorted(self.satelites, key=lambda s: s.get('success_rate'))

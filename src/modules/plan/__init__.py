@@ -1,6 +1,6 @@
 import itertools
 import functools
-
+import pprint
 import src.modules.tarea as tareaComponent
 
 
@@ -12,9 +12,10 @@ def buscarPlanes(tareas):
     planesEncontrados = []
     for length in range(1, len(tareas) + 1):
         for plan in itertools.combinations(tareas, length):
-            planesEncontrados.append(plan)
+            if (esValido(plan)):
+                planesEncontrados.append(plan)
 
-    return [list(plan) for plan in planesEncontrados if esValido(plan)]
+    return [list(plan) for plan in planesEncontrados]
 
 
 def esValido(plan):

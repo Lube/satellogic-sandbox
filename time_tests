@@ -1,0 +1,38 @@
+async 
+
+200 sate - 2500 tareas	
+
+real	0m16.754s
+user	0m1.580s
+sys	0m0.068s
+
+real	0m14.207s
+user	0m27.336s
+sys	0m4.128s
+
+---------------------------------
+
+select
+
+real	0m16.096s
+user	0m1.572s
+sys	0m0.092s
+
+real	0m13.239s
+user	0m15.888s
+sys	0m3.132s
+
+
+----------------------------------
+
+threaded
+
+real	0m15.670s
+user	0m1.316s
+sys	0m0.084s
+
+real	0m14.852s
+user	0m16.892s
+sys	0m3.064s
+
+

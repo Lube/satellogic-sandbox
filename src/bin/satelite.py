@@ -1,7 +1,7 @@
 import sys
 import time
 import os
-import asyncio
+import threading
 import socket
 import sys
 
@@ -17,30 +17,26 @@ print('Conectando a la base terrestre en %s' % server_address)
 satelite_name = sys.argv[1] if len(sys.argv) > 1 else None
 satelite_success_rate = float(sys.argv[2]) if len(sys.argv) > 2 else None
 
-loop = asyncio.get_event_loop()
-
-Satelite = satelite.Satelite(satelite_name, satelite_success_rate, loop)
+Satelite = satelite.Satelite(satelite_name, satelite_success_rate)
 
 
-@asyncio.coroutine
-def sat_server(loop, satelite):
+def sat_server(satelite):
     while True:
         action = satelite.getCurrentAction()
         if action is not None:
-            loop.create_task(execAction(loop, action, satelite.handleResponse))
+            execAction(action, satelite.handleResponse)
 
-        yield from asyncio.sleep(1)
+        time.sleep(1)
 
 
-@asyncio.coroutine
-def execAction(loop, action, handler):
+def execAction(action, handler):
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket:
         try:
             sat_socket.connect(server_address)
             action(sat_socket)
 
             if sat_socket.fileno() != -1:
-                response = yield from network.recv_async(sat_socket, loop)
+                response = network.recv(sat_socket)
                 handler(response)
         except ConnectionRefusedError:
             Satelite.resetConnection()
@@ -48,8 +44,7 @@ def execAction(loop, action, handler):
 
 
 try:
-    loop.create_task(sat_server(loop, Satelite))
-    loop.run_forever()
+    sat_server(Satelite)
 
 except KeyboardInterrupt:
     with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sat_socket:

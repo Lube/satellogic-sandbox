@@ -16,8 +16,7 @@ possible_names = json.load(open(_dir + "/ship_names.json", "r"))
 
 
 class Satelite:
-    def __init__(self, nombre, success_rate, loop):
-        self.loop = loop
+    def __init__(self, nombre, success_rate):
         self.status = OPERATIONAL_STATUS
         self.nombre = random.choice(
             possible_names) if nombre is None else nombre
@@ -41,7 +40,7 @@ class Satelite:
         return actionsByStatus.get(self.status, None)
 
     def sendToTerranBase(self, sock, request):
-        self.loop.sock_sendall(sock, network.encodeForNetwork(request))
+        sock.sendall(network.encodeForNetwork(request))
 
     def registerToTerranBase(self, sock):
         return self.sendToTerranBase(

@@ -18,7 +18,7 @@ def generateRandomTarea():
         'hora':
         int(1 * random.random()),
         'nombre':
-        f"{random.choice(verb_names)} {random.choice(star_names)}.",
+        random.choice(verb_names) + ' ' + random.choice(star_names),
         'recursos':
         list(
             set([

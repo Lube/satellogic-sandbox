@@ -81,6 +81,7 @@ except KeyboardInterrupt:
     sys.exit(0)
 
 finally:
+    del Terran_Base
     print('Protocolo de autodestrucción iniciado!')
     os.unlink(sat_address)
     os.unlink(web_address)

@@ -28,10 +28,18 @@ SATELITE_BUSY_STATUS = "BUSY"
 
 # tareas = [tareaA, tareaB, tareaC, tareaD]
 
-tareas = [
-    tareaComponent.generateRandomTarea()
-    for _ in range(int(500 * random.random()) + 1)
-]
+# tareas = [
+#     tareaComponent.generateRandomTarea()
+#     for _ in range(int(2500 * random.random()) + 1)
+# ]
+
+# tareas = [tareaComponent.generateRandomTarea() for _ in range(2500)]
+
+# with open(_dir + "/tareas.pck", "wb") as f:
+#     tareas = pickle.dump(tareas, f, pickle.HIGHEST_PROTOCOL)
+
+with open(_dir + "/tareas.pck", "rb") as f:
+    tareas = pickle.load(f)
 
 
 class Base:
@@ -41,8 +49,10 @@ class Base:
         self.loop = loop
         self.satelites = []
 
-        json.dump(list(), open(_dir + "/results.json", "w"), indent=2)
-        json.dump(list(), open(_dir + "/assignments.json", "w"), indent=2)
+        with open(_dir + "/results.json", "w") as f:
+            json.dump(list(), f, indent=2)
+        with open(_dir + "/assignments.json", "w") as f:
+            json.dump(list(), f, indent=2)
 
         self.webRequestHandlerDispatcher = {
             'getTareas': self.getTareas,
@@ -61,6 +71,12 @@ class Base:
         }
 
         self.loop.create_task(self.cleanupOldSatelites())
+
+    def __del__(self):
+        with open(_dir + "/results.json", "w") as f:
+            json.dump(list(), f, indent=2)
+        with open(_dir + "/assignments.json", "w") as f:
+            json.dump(list(), f, indent=2)
 
     @asyncio.coroutine
     def cleanupOldSatelites(self):
@@ -121,12 +137,15 @@ class Base:
                         if satelite.get('plan') is not None
                     ]))):
             try:
-                results = json.load(open(_dir + "/results.json", "r"))
+                with open(_dir + "/results.json", "r") as f:
+                    results = json.load(f)
             except:
                 results = []
 
             results.append(self.satelites)
-            json.dump(results, open(_dir + "/results.json", "w"), indent=2)
+
+            with open(_dir + "/results.json", "w") as f:
+                json.dump(results, f, indent=2)
 
             self.status = WAITING_FOR_ORDERS_STATUS
             self.resetAssignments()
@@ -181,22 +200,27 @@ class Base:
                     self.satelites[idx]['plan'] = plan
 
         try:
-            assignments = json.load(open(_dir + "/assignments.json", "r"))
+            with open(_dir + "/assignments.json", "r") as f:
+                assignments = json.load(f)
         except:
             assignments = []
 
         assignments.append(self.satelites)
-        json.dump(assignments, open(_dir + "/assignments.json", "w"), indent=2)
+
+        with open(_dir + "/assignments.json", "w") as f:
+            json.dump(assignments, f, indent=2)
 
     def getAsignaciones(self, request):
         try:
-            return json.load(open(_dir + "/assignments.json", "r"))
+            with open(_dir + "/assignments.json", "r") as f:
+                return json.load(f)
         except:
             return []
 
     def getResultados(self, request):
         try:
-            return json.load(open(_dir + "/results.json", "r"))
+            with open(_dir + "/results.json", "r") as f:
+                return json.load(f)
         except:
             return []
 
